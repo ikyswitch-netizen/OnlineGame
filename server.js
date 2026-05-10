@@ -1,18 +1,27 @@
+const express = require("express");
+const http = require("http");
 const WebSocket = require("ws");
 
-const server = new WebSocket.Server({ port: 3000 });
+const app = express();
 
-// 全プレイヤー情報
+// HTMLやJSを配信
+app.use(express.static(__dirname));
+
+// HTTPサーバー
+const server = http.createServer(app);
+
+// WebSocketサーバー
+const wss = new WebSocket.Server({ server });
+
+// プレイヤー一覧
 const players = {};
 
-server.on("connection", (socket) => {
+wss.on("connection", (socket) => {
 
   console.log("player connected");
 
-  // プレイヤーID
   const id = Math.random().toString(36).substr(2, 9);
 
-  // 初期位置
   players[id] = {
     x: 100,
     y: 100
@@ -22,7 +31,6 @@ server.on("connection", (socket) => {
 
     const data = JSON.parse(message);
 
-    // 移動データ受信
     if (data.type === "move") {
 
       players[id].x = data.x;
@@ -36,7 +44,7 @@ server.on("connection", (socket) => {
       players: players
     });
 
-    server.clients.forEach((client) => {
+    wss.clients.forEach((client) => {
 
       if (client.readyState === WebSocket.OPEN) {
         client.send(packet);
@@ -56,4 +64,9 @@ server.on("connection", (socket) => {
 
 });
 
-console.log("server started");
+// Render用PORT
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log("server started");
+});
